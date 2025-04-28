@@ -37,26 +37,25 @@ func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[s
 		return nil
 	})
 	if err != nil {
-        log.Panic(err)
-    }
+		log.Panic(err)
+	}
 
 	return accumulated, unspentOutputs
 }
-
 
 func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	var UTXOs []TXOutput
 	db := u.Blockchain.Db
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b:= tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(utxoBucket))
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			outs := DeserializeOutputs(v)
 
-			for _, out := range  outs.Outputs {
-				if out.IsLockedWithKey(pubKeyHash){
+			for _, out := range outs.Outputs {
+				if out.IsLockedWithKey(pubKeyHash) {
 					UTXOs = append(UTXOs, out)
 				}
 			}
@@ -64,17 +63,15 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 		return nil
 	})
 	if err != nil {
-        log.Panic(err)
-    }
+		log.Panic(err)
+	}
 
 	return UTXOs
 }
 
-
 func (u UTXOSet) CountTransactions() int {
 	db := u.Blockchain.Db
 	counter := 0
-
 
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
@@ -86,12 +83,11 @@ func (u UTXOSet) CountTransactions() int {
 		return nil
 	})
 	if err != nil {
-        log.Panic(err)
-    }
+		log.Panic(err)
+	}
 
 	return counter
 }
-
 
 func (u UTXOSet) Reindex() {
 	db := u.Blockchain.Db
@@ -135,12 +131,11 @@ func (u UTXOSet) Reindex() {
 	})
 }
 
-
-func (u UTXOSet) Update(block *Block)  {
+func (u UTXOSet) Update(block *Block) {
 	db := u.Blockchain.Db
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b:= tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(utxoBucket))
 
 		for _, tx := range block.Transactions {
 			if tx.IsCoinbase() == false {
@@ -160,26 +155,27 @@ func (u UTXOSet) Update(block *Block)  {
 						if err != nil {
 							log.Panic(err)
 						}
-				} else {
-					err := b.Put(vin.Txid, updatedOuts.Serialize())
-					if err != nil {
-                        log.Panic(err)
-                    }
+					} else {
+						err := b.Put(vin.Txid, updatedOuts.Serialize())
+						if err != nil {
+							log.Panic(err)
+						}
+					}
 				}
 			}
-		}
 
-		newOutputs := TXOutputs{}
-		for _, out := range tx.Vout {
-			newOutputs.Outputs = append(newOutputs.Outputs, out)
+			newOutputs := TXOutputs{}
+			for _, out := range tx.Vout {
+				newOutputs.Outputs = append(newOutputs.Outputs, out)
+			}
+			err := b.Put(tx.ID, newOutputs.Serialize())
+			if err != nil {
+				log.Panic(err)
+			}
 		}
-		err := b.Put(tx.ID, newOutputs.Serialize())
-		if err != nil {
-            log.Panic(err)
-        }
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
 	}
-	return nil
-})
-if err != nil {
-	log.Panic(err)}
 }

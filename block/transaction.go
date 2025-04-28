@@ -13,9 +13,7 @@ import (
 	"math/big"
 )
 
-
 const subsidy = 10
-
 
 func (tx *Transaction) SetID() {
 	var encoded bytes.Buffer
@@ -30,17 +28,12 @@ func (tx *Transaction) SetID() {
 	tx.ID = hash[:]
 }
 
-
-
-
-
 type TXInput struct {
 	Txid      []byte
 	Vout      int
 	Signature []byte
-	PubKey 	  []byte
+	PubKey    []byte
 }
-
 
 func (in *TXInput) UsesKey(pubKeyHash []byte) bool {
 	lockingHash := HashPubKey(in.PubKey)
@@ -48,15 +41,14 @@ func (in *TXInput) UsesKey(pubKeyHash []byte) bool {
 	return bytes.Compare(lockingHash, pubKeyHash) == 0
 }
 
-
 type TXOutput struct {
-	Value        int
-	PubKeyHash	[]byte
+	Value      int
+	PubKeyHash []byte
 }
 
-func (out *TXOutput) Lock(address []byte)  {
-	pubKeyHash := base58Decode(address)
-	pubKeyHash = pubKeyHash[1 :len(pubKeyHash)-4]
+func (out *TXOutput) Lock(address []byte) {
+	pubKeyHash := Base58Decode(address)
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 
 	out.PubKeyHash = pubKeyHash
 }
@@ -66,15 +58,11 @@ func (out *TXOutput) isLockedWithKey(pubKeyHash []byte) bool {
 
 }
 
-
-
-
 type Transaction struct {
 	ID   []byte
 	Vin  []TXInput
 	Vout []TXOutput
 }
-
 
 func (tx *Transaction) TrimmedCopy() Transaction {
 	var inputs []TXInput
@@ -93,7 +81,6 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
-
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	txCopy := tx.TrimmedCopy()
 	curve := elliptic.P256()
@@ -104,18 +91,18 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		txCopy.Vin[inID].PubKey = prevTx.Vout[vin.Vout].PubKeyHash
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nil
-		
+
 		r := big.Int{}
 		s := big.Int{}
 		signLen := len(vin.Signature)
-		r.SetBytes(vin.Signature[:(signLen/2)])
-		s.SetBytes(vin.Signature[(signLen/2):])
+		r.SetBytes(vin.Signature[:(signLen / 2)])
+		s.SetBytes(vin.Signature[(signLen / 2):])
 
 		x := big.Int{}
 		y := big.Int{}
 		keyLen := len(vin.PubKey)
-		x.SetBytes(vin.PubKey[:(keyLen/2)])
-		y.SetBytes(vin.PubKey[(keyLen/2):])
+		x.SetBytes(vin.PubKey[:(keyLen / 2)])
+		y.SetBytes(vin.PubKey[(keyLen / 2):])
 
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		if ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) == false {
@@ -124,9 +111,6 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	}
 	return true
 }
-
-
-
 
 func NewCoinBaseTX(to, data string) *Transaction {
 	if data == "" {
@@ -141,15 +125,13 @@ func NewCoinBaseTX(to, data string) *Transaction {
 	return &tx
 }
 
-
-func  (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
+func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
 	return in.ScriptSig == unlockingData
 }
 
 func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
 	return out.ScriptPubkey == unlockingData
 }
-
 
 func (bc *Blockchain) FindUnspentTransactions(address string) []Transaction {
 	var unspentTXs []Transaction
@@ -160,8 +142,8 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []Transaction {
 		block := bci.Next()
 		for _, tx := range block.Transactions {
 			txID := hex.EncodeToString(tx.ID)
-		
-			Outputs:
+
+		Outputs:
 			for outIdx, out := range tx.Vout {
 				if spentTXOs[txID] != nil {
 					for _, spentOut := range spentTXOs[txID] {
@@ -176,7 +158,7 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []Transaction {
 			}
 			if tx.IsCoinBase() == false {
 				for _, in := range tx.Vin {
-					if in.CanUnlockOutputWith(address){
+					if in.CanUnlockOutputWith(address) {
 						inTxID := hex.EncodeToString(in.Txid)
 						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
 					}
@@ -184,8 +166,8 @@ func (bc *Blockchain) FindUnspentTransactions(address string) []Transaction {
 			}
 		}
 		if len(block.PrevBlockHash) == 0 {
-            break
-        }
+			break
+		}
 	}
 	return unspentTXs
 }
@@ -195,7 +177,7 @@ func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int, map
 	unspentTXs := bc.FindUnspentTransactions(address)
 	accumulated := 0
 
-	Work:
+Work:
 	for _, tx := range unspentTXs {
 		txID := hex.EncodeToString(tx.ID)
 
@@ -213,9 +195,6 @@ func (bc *Blockchain) FindSpendableOutputs(address string, amount int) (int, map
 	return accumulated, unspentOutputs
 }
 
-
-
-
 func (bc *Blockchain) FindUTXO(address string) []TXOutput {
 	var UTXOs []TXOutput
 	unspentTransactions := bc.FindUnspentTransactions(address)
@@ -229,8 +208,6 @@ func (bc *Blockchain) FindUTXO(address string) []TXOutput {
 	}
 	return UTXOs
 }
-
-
 
 func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
 	var inputs []TXInput
@@ -262,10 +239,9 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 	return &tx
 }
 
-
-func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTxs map[string]Transaction)  {
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTxs map[string]Transaction) {
 	if tx.IsCoinBase() {
-		return 
+		return
 	}
 
 	txCopy := tx.TrimmedCopy()
@@ -277,7 +253,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTxs map[string]Transac
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].PubKey = nilfunc
 
-		r,s, err := ecdsa.Sign(rand.Reader(), &privKey, tx.Copy.ID)
+		r, s, err := ecdsa.Sign(rand.Reader(), &privKey, tx.Copy.ID)
 		signature := append(r.Bytes(), s.Bytes()...)
 		tx.Vin[inID].Signature = signature
 	}

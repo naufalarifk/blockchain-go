@@ -11,13 +11,10 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-
-
 type Blockchain struct {
 	tip []byte
 	Db  *bolt.DB
 }
-
 
 const dbFile = "blockchain_%s.db"
 const blocksBucket = "blocks"
@@ -54,7 +51,6 @@ func NewGenesisBlock(coinbase *Transaction) *Block {
 	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
-
 func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	bci := bc.Iterator()
 
@@ -73,8 +69,6 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 	return Transaction{}, errors.New("Transaction not found")
 }
 
-
-
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 	prevTxs := make(map[string]Transaction)
 
@@ -88,9 +82,7 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 	return tx.Verify(prevTxs)
 }
 
-
-
-func (bc *Blockchain) MineBlock(transactions []*Transaction)  {
+func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 	var lastHash []byte
 
 	for _, tx := range transactions {
@@ -99,18 +91,15 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction)  {
 		}
 	}
 
-
-
-
 	err := bc.Db.View(func(tx *bolt.Tx) error {
-		b:= tx.Bucket([]byte(blocksBucket))
+		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
 		return nil
 	})
 
 	if err != nil {
-        log.Panic(err)
-    }
+		log.Panic(err)
+	}
 
 	newBlock := NewBlock(transactions, lastHash)
 
@@ -129,17 +118,12 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction)  {
 	})
 }
 
-
-
-
-
 func CreateBlockchain(address string) *Blockchain {
 
 	if dbExists() {
 		fmt.Println("Blockchain already exists")
 		os.Exit(1)
 	}
-
 
 	var tip []byte
 	cbtx := NewCoinBaseTX(address, genesisCoinbaseData)
@@ -163,8 +147,8 @@ func CreateBlockchain(address string) *Blockchain {
 		tip = genesis.Hash
 
 		return nil
-    })
-		
+	})
+
 	if err != nil {
 		log.Panic(err)
 	}
@@ -174,15 +158,12 @@ func CreateBlockchain(address string) *Blockchain {
 	return &bc
 }
 
-
 func dbExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
-
-
 
 func NewBlockchain(address string) *Blockchain {
 	if dbExists() == false {
@@ -196,16 +177,16 @@ func NewBlockchain(address string) *Blockchain {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		b:= tx.Bucket([]byte(blocksBucket))
+		b := tx.Bucket([]byte(blocksBucket))
 		tip = b.Get([]byte("1"))
 		return nil
-	
+
 	})
 
 	if err != nil {
 		log.Panic(err)
 	}
-	bc:= Blockchain{tip, db}
+	bc := Blockchain{tip, db}
 
 	return &bc
 }

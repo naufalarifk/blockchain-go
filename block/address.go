@@ -14,23 +14,20 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
-
-
 const version = byte(0x00)
 const walletFile = "wallet.dat"
 const addressChecksumLen = 4
 
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
-	PublicKey []byte
+	PublicKey  []byte
 }
-
 
 type Wallets struct {
 	Wallets map[string]*Wallet
 }
 
-func NewWallets(nodeID string) (*Wallets, error)  {
+func NewWallets(nodeID string) (*Wallets, error) {
 	wallets := Wallets{}
 	wallets.Wallets = make(map[string]*Wallet)
 
@@ -38,10 +35,9 @@ func NewWallets(nodeID string) (*Wallets, error)  {
 	return &wallets, err
 }
 
-
 func (ws *Wallets) LoadFromFile(nodeID string) error {
 	walletFile := fmt.Sprintf(walletFile, nodeID)
-	if _, err := os.Stat(walletFile); os.IsNotExist(err){
+	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
 		return err
 	}
 	fileContent, err := os.ReadFile(walletFile)
@@ -62,7 +58,6 @@ func (ws *Wallets) LoadFromFile(nodeID string) error {
 	return nil
 }
 
-
 func (ws Wallets) SaveToFile(nodeID string) {
 	var content bytes.Buffer
 	walletFile := fmt.Sprintf(walletFile, nodeID)
@@ -72,24 +67,20 @@ func (ws Wallets) SaveToFile(nodeID string) {
 	encoder := gob.NewEncoder(&content)
 	err := encoder.Encode(ws)
 	if err != nil {
-        log.Panic(err)
-    }
+		log.Panic(err)
+	}
 
 	err = os.WriteFile(walletFile, content.Bytes(), 0064)
-	
+
 }
 
-
-
-
-
-func NewWallet() *Wallet  {
+func NewWallet() *Wallet {
 	private, public := newKeypair()
 	wallet := Wallet{private, public}
 	return &wallet
 }
 
-func newKeypair() (ecdsa.PrivateKey, []byte)  {
+func newKeypair() (ecdsa.PrivateKey, []byte) {
 	curve := elliptic.P256()
 	private, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
@@ -100,12 +91,11 @@ func newKeypair() (ecdsa.PrivateKey, []byte)  {
 	return *private, pubKey
 }
 
-
-func HashPubKey(pubKey []byte) []byte  {
+func HashPubKey(pubKey []byte) []byte {
 	publicSHA256 := sha256.Sum256(pubKey)
 
 	RIPEMD160Hasher := ripemd160.New()
-	_,err := RIPEMD160Hasher.Write(publicSHA256[:])
+	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
 	if err != nil {
 		log.Panic(err)
 	}
@@ -114,7 +104,6 @@ func HashPubKey(pubKey []byte) []byte  {
 	return publicRIPEMD160
 }
 
-
 func checksum(payload []byte) []byte {
 	firstSha := sha256.Sum256(payload)
 	secondSha := sha256.Sum256(firstSha[:])
@@ -122,17 +111,15 @@ func checksum(payload []byte) []byte {
 	return secondSha[:addressChecksumLen]
 }
 
-
 func ValidateAddress(address string) bool {
 	pubKeyHash := Base58Decode([]byte(address))
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
-	pubKeyHash = pubKeyHash[1: len(pubKeyHash)-addressChecksumLen]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
 	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
 
 	return bytes.Compare(actualChecksum, targetChecksum) == 0
 }
-
 
 func (w Wallet) GetAddress() []byte {
 	pubKeyHash := HashPubKey(w.PublicKey)
@@ -145,12 +132,9 @@ func (w Wallet) GetAddress() []byte {
 	return address
 }
 
-
-
 func (ws *Wallets) CreateWallet() string {
 	wallet := NewWallet()
 	address := fmt.Sprintf("%s", wallet.GetAddress())
-
 
 	ws.Wallets[address] = wallet
 

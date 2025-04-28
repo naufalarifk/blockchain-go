@@ -7,9 +7,7 @@ import (
 	"os"
 )
 
-type CLI struct {}
-
-
+type CLI struct{}
 
 func (cli *CLI) printUsage() {
 	fmt.Println("Usage:")
@@ -28,14 +26,14 @@ func (cli *CLI) validateArgs() {
 	}
 }
 
-func (cli *CLI) createBlockchain(address string)  {
+func (cli *CLI) createBlockchain(address string) {
 	if !ValidateAddress(address) {
 		log.Panic("ERROR: Invalid address")
 	}
 }
 
-func (cli *CLI) createWallet(nodeID string)  {
-	wallets,_ := NewWallets(nodeID)
+func (cli *CLI) createWallet(nodeID string) {
+	wallets, _ := NewWallets(nodeID)
 	address := wallets.CreateWallet()
 	wallets.SaveToFile(nodeID)
 
@@ -48,26 +46,24 @@ func (cli *CLI) getBalance(address, nodeID string) {
 		log.Panic("ERROR: Invalid address")
 	}
 
-	bc:= NewBlockchain(nodeID)
+	bc := NewBlockchain(nodeID)
 	UTXOSet := UTXOSet{bc}
 	defer bc.Db.Close()
 
 	balance := 0
 	pubKeyHash := Base58Decode([]byte(address))
-	pubKeyHash = pubKeyHash[1: len(pubKeyHash)-4]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
 	UTXOs := UTXOSet.FindUTXO(pubKeyHash)
 
 	for _, out := range UTXOs {
 		balance += out.Value
 	}
 
-
 	fmt.Printf("Balance of '%s': %d\n", address, balance)
 
 }
 
-
-func (cli *CLI) Run () {
+func (cli *CLI) Run() {
 	cli.validateArgs()
 
 	getBalanceCmd := flag.NewFlagSet("balance", flag.ExitOnError)
@@ -82,7 +78,6 @@ func (cli *CLI) Run () {
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
 	sendAmount := sendCmd.Float64("amount", 0, "Amount of coins to send")
-
 
 	switch os.Args[1] {
 	case "getbalance":
@@ -116,7 +111,7 @@ func (cli *CLI) Run () {
 			log.Panic(err)
 		}
 
-	} 
+	}
 
 	if getBalanceCmd.Parsed() {
 		if *getBalanceAddress == "" {
@@ -154,6 +149,5 @@ func (cli *CLI) Run () {
 
 		cli.send(*sendFrom, *sendTo, *sendAmount)
 	}
-
 
 }
